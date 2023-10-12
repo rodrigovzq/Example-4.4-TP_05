@@ -1,7 +1,14 @@
+/*!****************************************************************************
+ * @file main.cpp
+ * @brief TP 05  Máquina de Estado & RTC
+ * @author Quattrone Martin
+ * @author Vazquez Rodrigo
+ *******************************************************************************/
 //=====[Libraries]=============================================================
 
 #include "mbed.h"
 #include "arm_book_lib.h"
+#include <vector> // Agregar la cabecera para std::vector
 
 //=====[Defines]===============================================================
 
@@ -26,6 +33,10 @@ typedef enum {
     MATRIX_KEYPAD_KEY_HOLD_PRESSED
 } matrixKeypadState_t;
 
+/**
+ * @brief Estructura que almacena eventos del sistema.
+ */
+
 typedef struct systemEvent {
     time_t seconds;
     char typeOfEvent[EVENT_NAME_MAX_LENGTH];
@@ -46,8 +57,14 @@ UnbufferedSerial uartUsb(USBTX, USBRX, 115200);
 
 AnalogIn lm35(A1);
 
-DigitalOut keypadRowPins[KEYPAD_NUMBER_OF_ROWS] = {PB_3, PB_5, PC_7, PA_15};
-DigitalIn keypadColPins[KEYPAD_NUMBER_OF_COLS]  = {PB_12, PB_13, PB_15, PC_6};
+// Reemplazamos los arrays de C con vectores de C++
+// DigitalOut keypadRowPins[KEYPAD_NUMBER_OF_ROWS] = {PB_3, PB_5, PC_7, PA_15};
+std::vector<DigitalOut> keypadRowPins; // Vectores para los pines de fila
+
+// DigitalIn keypadColPins[KEYPAD_NUMBER_OF_COLS] = {PB_12, PB_13, PB_15, PC_6};
+std::vector<DigitalIn> keypadColPins;  // Vectores para los pines de columna
+
+
 
 //=====[Declaration and initialization of public global variables]=============
 
@@ -92,28 +109,84 @@ int eventsIndex            = 0;
 systemEvent_t arrayOfStoredEvents[EVENT_MAX_STORAGE];
 
 //=====[Declarations (prototypes) of public functions]=========================
-
+/**
+ * @brief Función de inicialización de entradas.
+ */
 void inputsInit();
+/**
+ * @brief Función de inicialización de salidas.
+ */
 void outputsInit();
-
+/**
+ * @brief Actualiza la activación de la alarma.
+ */
 void alarmActivationUpdate();
+/**
+ * @brief Actualiza la desactivación de la alarma.
+ */
 void alarmDeactivationUpdate();
-
-void uartTask();
+/**
+ * @brief Tarea UART para gestionar la comunicación serial.
+ */
+ void uartTask();
+/**
+ * @brief Muestra los comandos disponibles a través de UART.
+ */
 void availableCommands();
+
+/**
+ * @brief Compara dos códigos para verificar si son iguales.
+ * @return Verdadero si los códigos son iguales, falso de lo contrario.
+ */
 bool areEqual();
 
+/**
+ * @brief Actualiza el registro de eventos del sistema.
+ */
 void eventLogUpdate();
-void systemElementStateUpdate( bool lastState,
-                               bool currentState,
-                               const char* elementName );
 
-float celsiusToFahrenheit( float tempInCelsiusDegrees );
-float analogReadingScaledWithTheLM35Formula( float analogReading );
+/**
+ * @brief Actualiza el estado de los elementos del sistema y registra eventos.
+ * @param lastState Estado anterior del elemento.
+ * @param currentState Estado actual del elemento.
+ * @param elementName Nombre del elemento.
+ */
+void systemElementStateUpdate(bool lastState, bool currentState, const char* elementName);
+
+/**
+ * @brief Convierte grados Celsius a grados Fahrenheit.
+ * @param tempInCelsiusDegrees Temperatura en grados Celsius.
+ * @return Temperatura en grados Fahrenheit.
+ */
+float celsiusToFahrenheit(float tempInCelsiusDegrees);
+
+/**
+ * @brief Realiza una lectura analógica y la escala con la fórmula LM35.
+ * @param analogReading Lectura analógica sin escalar.
+ * @return Lectura escala con la fórmula LM35.
+ */
+float analogReadingScaledWithTheLM35Formula(float analogReading);
+
+/**
+ * @brief Inicializa el arreglo de lecturas del sensor LM35.
+ */
 void lm35ReadingsArrayInit();
 
+/**
+ * @brief Inicializa el teclado matricial.
+ */
 void matrixKeypadInit();
+
+/**
+ * @brief Escanea el teclado matricial y devuelve la tecla presionada.
+ * @return Tecla presionada o '\0' si no se presiona ninguna tecla.
+ */
 char matrixKeypadScan();
+
+/**
+ * @brief Actualiza el estado del teclado matricial y gestiona las pulsaciones.
+ * @return Tecla liberada o '\0' si ninguna tecla se libera.
+ */
 char matrixKeypadUpdate();
 
 //=====[Main function, the program entry point after power on or reset]========
@@ -140,6 +213,10 @@ void inputsInit()
     sirenPin.mode(OpenDrain);
     sirenPin.input();
     matrixKeypadInit();
+
+    // Inicializar los vectores de pines de fila y columna
+    keypadRowPins = {PB_3, PB_5, PC_7, PA_15};
+    keypadColPins = {PB_12, PB_13, PB_15, PC_6};
 }
 
 void outputsInit()

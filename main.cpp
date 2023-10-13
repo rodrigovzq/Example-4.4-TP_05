@@ -59,12 +59,39 @@ AnalogIn lm35(A1);
 
 // Reemplazamos los arrays de C con vectores de C++
 // DigitalOut keypadRowPins[KEYPAD_NUMBER_OF_ROWS] = {PB_3, PB_5, PC_7, PA_15};
-std::vector<DigitalOut> keypadRowPins; // Vectores para los pines de fila
+std::vector<DigitalOut> keypadRowPins = {PB_3, PB_5, PC_7, PA_15}; // Vectores para los pines de fila
 
 // DigitalIn keypadColPins[KEYPAD_NUMBER_OF_COLS] = {PB_12, PB_13, PB_15, PC_6};
-std::vector<DigitalIn> keypadColPins;  // Vectores para los pines de columna
+std::vector<DigitalIn> keypadColPins = {PB_12, PB_13, PB_15, PC_6};  // Vectores para los pines de columna
+
+// Inicializar los vectores de pines de fila y columna
+//===============================[RTC]=============
+// Incluir la biblioteca HAL
+#include "stm32f4xx_hal.h"
+
+// Inicializar el RTC
+RTC_HandleTypeDef hrtc;
+
+void RTC_Init(void) {
+    // Habilitar el reloj del RTC
+    __HAL_RCC_RTC_ENABLE();
+
+    // Inicializar la estructura RTC
+    // Esto establece el campo Instance de la estructura hrtc para apuntar al registro RTC en el microcontrolador. RTC es un tipo de dato definido en la biblioteca HAL que representa el RTC del microcontrolador.
+    hrtc.Instance = RTC; 
+    //Aca se configura el formato de hora del RTC. RTC_HOURFORMAT_24 establece el formato de 24 horas en lugar del formato de 12 horas .
+    hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
+    // El RTC utiliza un predivisor asincrónico (AsynchPrediv) y un predivisor síncrono (SynchPrediv) para dividir la frecuencia del reloj. El valor 127 es un valor de ejemplo que se puede ajustar según lo que se necesite. Estos valores determinan la frecuencia del reloj RTC y, en última instancia, la precisión de la hora. La elección de estos valores depende de la frecuencia del clock principal de tu microcontrolador.
+    hrtc.Init.AsynchPrediv = 127; //  ajustar el predivisor
+    hrtc.Init.SynchPrediv = 255;  //  ajustar el predivisor 
+    // Esto configura la salida del RTC. En este caso, se establece en DISABLE 
+    hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
+    hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+    hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
 
 
+    // Opcionalmente, se puede configurar la fecha y la hora actual aca.
+}
 
 //=====[Declaration and initialization of public global variables]=============
 
@@ -214,9 +241,7 @@ void inputsInit()
     sirenPin.input();
     matrixKeypadInit();
 
-    // Inicializar los vectores de pines de fila y columna
-    keypadRowPins = {PB_3, PB_5, PC_7, PA_15};
-    keypadColPins = {PB_12, PB_13, PB_15, PC_6};
+
 }
 
 void outputsInit()
@@ -296,8 +321,13 @@ void alarmDeactivationUpdate()
 {
     if ( numberOfIncorrectCodes < 5 ) {
         char keyReleased = matrixKeypadUpdate();
+        
         if( keyReleased != '\0' && keyReleased != '#' ) {
             keyPressed[matrixKeypadCodeIndex] = keyReleased;
+            // uartUsb.write( "KEY: ", 5);
+            // uartUsb.write( &keyReleased, 2);
+            // uartUsb.write( "\r\n", 1);    
+            // Esto se agrego para verificar el funcionamiento del keypad
             if( matrixKeypadCodeIndex >= NUMBER_OF_KEYS ) {
                 matrixKeypadCodeIndex = 0;
             } else {
@@ -645,6 +675,7 @@ char matrixKeypadUpdate()
     switch( matrixKeypadState ) {
 
     case MATRIX_KEYPAD_SCANNING:
+        //uartUsb.write( "KEYPAD SCANNING\r\n", 16 );
         keyDetected = matrixKeypadScan();
         if( keyDetected != '\0' ) {
             matrixKeypadLastKeyPressed = keyDetected;
@@ -654,6 +685,7 @@ char matrixKeypadUpdate()
         break;
 
     case MATRIX_KEYPAD_DEBOUNCE:
+        //uartUsb.write( "KEYPAD DEBOUNCE\r\n", 16 );
         if( accumulatedDebounceMatrixKeypadTime >=
             DEBOUNCE_KEY_TIME_MS ) {
             keyDetected = matrixKeypadScan();
@@ -668,6 +700,7 @@ char matrixKeypadUpdate()
         break;
 
     case MATRIX_KEYPAD_KEY_HOLD_PRESSED:
+        //uartUsb.write( "KEYPAD KEY HOLD\r\n", 16 );
         keyDetected = matrixKeypadScan();
         if( keyDetected != matrixKeypadLastKeyPressed ) {
             if( keyDetected == '\0' ) {
